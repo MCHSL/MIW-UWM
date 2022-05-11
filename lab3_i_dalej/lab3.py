@@ -1,3 +1,4 @@
+import copy
 import math
 import numpy as np
 import random
@@ -309,22 +310,84 @@ def QR_decomposition(matrix):
         u_vectors.append(v_i)
 
     Q = np.array([normalize_vector(u) for u in u_vectors])
-    R = np.dot(Q.T, matrix)
+    R = np.dot(Q, matrix.T)
 
     return Q, R
 
 
-def eigenvalues(matrix):
-    Q, R = QR_decomposition(matrix)
-    bleh = np.dot(np.linalg.inv(Q), matrix)
-    ww = np.dot(bleh, Q)
-    return np.diag(ww)
+def next_A(A):
+    Q, R = QR_decomposition(A)
+    Q = Q.T
+    return np.dot(np.dot(Q.T, A), Q)
+
+
+def is_upper_triangular(M):
+    for i in range(1, len(M)):
+        for j in range(0, i):
+            if M[i][j] > 0.001:
+                return False
+    return True
+
+
+def eigenvalues(A):
+    A_copy = copy.deepcopy(A)
+    while not is_upper_triangular(A_copy):
+        print(A_copy)
+        A_copy = next_A(A_copy)
+    return np.diag(A_copy)[::-1]
+
+
+def gauss_jordan_elimination(A):
+    size = np.shape(A)[1]
+    result = []
+
+    for i in range(size):
+        if A[i][i] == 0:
+            raise Exception("Zero!!!")
+
+        for j in range(size):
+            if i != j:
+                ratio = A[j][i] / A[i][i]
+
+                for k in range(size):
+                    A[j][k] -= ratio * A[i][k]
+
+    for i in range(size):
+        result.append(A[i][size - 1] / A[i][i])
+
+    return result
+
+
+def eigenvector(A, eigenvalue):
+    A_copy = copy.deepcopy(A)
+    size = np.shape(A)[1]
+
+    for i in range(size):
+        for j in range(size):
+            A_copy[i][j] = A[i][j] - eigenvalue
+
+    return gauss_jordan_elimination(A_copy)
+
+
+def eigenvectors(A):
+    evalues = eigenvalues(A)
+    eigenvectors = []
+    for eigenvalue in evalues:
+        eigenvectors.append(eigenvector(A, eigenvalue))
+    return eigenvectors
 
 
 A = np.array([[2.0, 1.0, 0.0], [0.0, 1.0, 2.0]])
-print(A)
+# print(A)
 Q, R = QR_decomposition(A)
-print(np.dot(Q, R).round(2))
+# print(Q)
+# print(R)
+Q2, R2 = np.linalg.qr(A.T)
+# print(Q2.T)
+# print(R2)
+# print(np.dot(Q.T, R).round(2))
 
-B = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=np.float32)
-print(eigenvalues(B).round(2))
+B = np.array([[1, 0, 1], [1, 1, 0], [0, 1, 1]], dtype=np.float32)
+print(np.linalg.eig(B)[0].round(2))
+
+print(eigenvectors(B))
