@@ -301,6 +301,7 @@ def normalize_vector(vector):
 
 def QR_decomposition(matrix):
     u_1 = matrix[0].copy()
+
     u_vectors = [u_1]
     num_columns = matrix.shape[0]
     for i in range(1, num_columns):
@@ -309,85 +310,106 @@ def QR_decomposition(matrix):
             v_i -= project_vector(v_i, u)
         u_vectors.append(v_i)
 
-    Q = np.array([normalize_vector(u) for u in u_vectors])
+    Q = -np.array([normalize_vector(u) for u in u_vectors])
     R = np.dot(Q, matrix.T)
 
     return Q, R
 
 
-def next_A(A):
-    Q, R = QR_decomposition(A)
-    Q = Q.T
-    return np.dot(np.dot(Q.T, A), Q)
-
-
-def is_upper_triangular(M):
-    for i in range(1, len(M)):
-        for j in range(0, i):
-            if M[i][j] > 0.001:
-                return False
-    return True
-
-
 def eigenvalues(A):
-    A_copy = copy.deepcopy(A)
-    while not is_upper_triangular(A_copy):
-        print(A_copy)
-        A_copy = next_A(A_copy)
-    return np.diag(A_copy)[::-1]
+    A = np.copy(A)
+    for i in range(30):
+        Q, R = QR_decomposition(A)
+        A = np.dot(R, Q.T)
 
-
-def gauss_jordan_elimination(A):
-    size = np.shape(A)[1]
-    result = []
-
-    for i in range(size):
-        if A[i][i] == 0:
-            raise Exception("Zero!!!")
-
-        for j in range(size):
-            if i != j:
-                ratio = A[j][i] / A[i][i]
-
-                for k in range(size):
-                    A[j][k] -= ratio * A[i][k]
-
-    for i in range(size):
-        result.append(A[i][size - 1] / A[i][i])
-
-    return result
-
-
-def eigenvector(A, eigenvalue):
-    A_copy = copy.deepcopy(A)
-    size = np.shape(A)[1]
-
-    for i in range(size):
-        for j in range(size):
-            A_copy[i][j] = A[i][j] - eigenvalue
-
-    return gauss_jordan_elimination(A_copy)
+    return np.diag(A)[::-1]  # Od tylu zeby kolejnosc byla zgodna z np.linalg.eig
 
 
 def eigenvectors(A):
-    evalues = eigenvalues(A)
-    eigenvectors = []
-    for eigenvalue in evalues:
-        eigenvectors.append(eigenvector(A, eigenvalue))
-    return eigenvectors
+    eigvals = eigenvalues(A)
+    results = []
+    temps = []
+    for val in eigvals:
+        temps.append(A - np.diag([val] * len(A[0])))
+    print(temps)
+    results = np.linalg.solve(np.array(temps), np.array([0] * len(temps)))
+
+    return results
 
 
 A = np.array([[2.0, 1.0, 0.0], [0.0, 1.0, 2.0]])
+# print("Wejsciowa: ")
 # print(A)
-Q, R = QR_decomposition(A)
-# print(Q)
+# Q, R = QR_decomposition(A)
+# print("Moj algo:")
+# print(Q.T)
 # print(R)
-Q2, R2 = np.linalg.qr(A.T)
-# print(Q2.T)
+# Q2, R2 = np.linalg.qr(A.T)
+# print("Numpy:")
+# print(Q2)
 # print(R2)
 # print(np.dot(Q.T, R).round(2))
+# print(np.dot(Q2, R2).round(2))
 
-B = np.array([[1, 0, 1], [1, 1, 0], [0, 1, 1]], dtype=np.float32)
-print(np.linalg.eig(B)[0].round(2))
+B = np.array([[-5.0, 2.0], [2.0, -5.0]])
+print(np.linalg.eig(B)[1].round(2))
+print(eigenvalues(B))
+# print(eigenvectors(B))
 
-print(eigenvectors(B))
+
+def is_diagonal(matrix):
+    i, j = np.nonzero(matrix)
+    return np.all(i == j)
+
+
+def is_orthogonal_base(matrix):
+    return is_diagonal(np.dot(matrix, matrix.T))
+
+
+A = np.array([[1, 0], [0, 1]])
+B = np.array([[1, 1], [1, 0]])
+
+# print(A)
+# print(is_orthogonal_base(A))
+
+# print(B)
+# print(is_orthogonal_base(B))
+
+
+bruh = np.array(
+    [
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, -1, -1, -1, -1],
+        [1, 1, -1, -1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, -1, -1],
+        [1, -1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, -1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, -1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, -1],
+    ],
+    dtype=np.float32,
+)
+
+# print(bruh)
+# print(is_orthogonal_base(bruh))
+
+
+def normalize_base(matrix):
+    result = []
+    for row in matrix:
+        v_len = math.sqrt(np.dot(row, row))
+        row /= v_len
+        result.append(row)
+
+    return np.array(result)
+
+
+bruh = normalize_base(bruh)
+
+# print(np.array2string(bruh, max_line_width=150))
+
+vec_A = np.array([8, 6, 2, 3, 4, 6, 6, 5])
+
+vec_A_w_bazie_bruh = np.dot(bruh.T, vec_A)
+
+# print(vec_A_w_bazie_bruh)
