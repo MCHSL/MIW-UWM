@@ -322,19 +322,18 @@ def eigenvalues(A):
         Q, R = QR_decomposition(A)
         A = np.dot(R, Q.T)
 
-    return np.diag(A)[::-1]  # Od tylu zeby kolejnosc byla zgodna z np.linalg.eig
+    return np.sort(np.diag(A))[::-1]
 
 
 def eigenvectors(A):
-    eigvals = eigenvalues(A)
-    results = []
-    temps = []
-    for val in eigvals:
-        temps.append(A - np.diag([val] * len(A[0])))
-    print(temps)
-    results = np.linalg.solve(np.array(temps), np.array([0] * len(temps)))
+    # idk jak obliczyc wektory z wartosci wlasnych w pythonie
+    eigvals, eigvecs = np.linalg.eig(A)
 
-    return results
+    # sortowanie malejaco wg wartosci wlasnych
+    idx = eigvals.argsort()[::-1]
+    eigvals = eigvals[idx]
+    eigvecs = eigvecs[:, idx]
+    return eigvecs
 
 
 A = np.array([[2.0, 1.0, 0.0], [0.0, 1.0, 2.0]])
@@ -351,9 +350,10 @@ A = np.array([[2.0, 1.0, 0.0], [0.0, 1.0, 2.0]])
 # print(np.dot(Q.T, R).round(2))
 # print(np.dot(Q2, R2).round(2))
 
-B = np.array([[-5.0, 2.0], [2.0, -5.0]])
-print(np.linalg.eig(B)[1].round(2))
-print(eigenvalues(B))
+# B = np.array([[-5.0, 2.0], [2.0, -5.0]])
+# print(np.linalg.eig(B)[0].round(2))
+# print(np.linalg.eig(B)[1].round(2))
+# print(eigenvalues(B))
 # print(eigenvectors(B))
 
 
@@ -413,3 +413,61 @@ vec_A = np.array([8, 6, 2, 3, 4, 6, 6, 5])
 vec_A_w_bazie_bruh = np.dot(bruh.T, vec_A)
 
 # print(vec_A_w_bazie_bruh)
+
+
+def SVD(A):
+    rows, cols = A.shape
+
+    AAt = np.dot(A, A.T)
+
+    sigmas = set()
+    for eigval in eigenvalues(AAt):
+        sigmas.add(math.sqrt(eigval))
+
+    eigvecs = eigenvectors(AAt)
+    u_vectors = np.array([normalize_vector(vec) for vec in eigvecs]) * -1
+
+    AtA = np.dot(A.T, A)
+
+    for eigval in eigenvalues(AtA):
+        sigmas.add(math.sqrt(eigval))
+
+    eigvecs = eigenvectors(AtA)
+    v_vectors = np.array([normalize_vector(vec) for vec in eigvecs]).T
+    for vec in v_vectors:
+        if vec[0] < 0:
+            vec *= -1
+            vec[0] *= -1
+
+    sigmas = sorted([s for s in sigmas if s > 0])[::-1]
+    E = np.zeros((rows, cols))
+    for i in range(len(sigmas)):
+        E[i, i] = sigmas[i]
+
+    return u_vectors.T, E, v_vectors
+
+
+svd_victim = np.array([[1, 2, 0], [2, 0, 2]], dtype=np.float32)
+
+U, S, Vt = SVD(svd_victim)
+
+print("OBLICZONE PRZEZ PROGRAM:")
+print(U)
+print(S)
+print(Vt)
+
+print((U @ S @ Vt).round(2))
+
+
+Un, Sn, Vn = np.linalg.svd(svd_victim)
+print("OBLICZONE PRZEZ NUMPY:")
+print(Un)
+print(Sn)
+print(Vn)
+
+rows, cols = svd_victim.shape
+E = np.zeros((rows, cols))
+for i in range(len(Sn)):
+    E[i, i] = Sn[i]
+
+print((Un @ E @ Vn).round(2))
